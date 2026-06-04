@@ -3,7 +3,6 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ "main" ]
-    tags: [ "v*" ]
   pull_request:
     branches: [ "main" ]
 
@@ -23,21 +22,28 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
+      - name: Compute version
+        id: version
+        run: echo "tag=v1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+
       - name: Build and run tests
         run: mvn --batch-mode verify
+
+      - name: Stage versioned JAR
+        run: cp target/pams-cli-app-1.0.0.jar target/pams-cli-app-${{ steps.version.outputs.tag }}.jar
 
       - name: Upload JAR artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pams-cli-app-jar
-          path: target/pams-cli-app-*.jar
+          name: pams-cli-app-${{ steps.version.outputs.tag }}
+          path: target/pams-cli-app-${{ steps.version.outputs.tag }}.jar
           if-no-files-found: error
 
   release:
     name: GitHub Release
     needs: build-and-test
     runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     permissions:
       contents: write
 
@@ -45,18 +51,20 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 25
-        uses: actions/setup-java@v4
-        with:
-          java-version: '25'
-          distribution: 'temurin'
-          cache: maven
+      - name: Compute version
+        id: version
+        run: echo "tag=v1.0.${{ github.run_number }}" >> "$GITHUB_OUTPUT"
 
-      - name: Build executable JAR
-        run: mvn --batch-mode package -DskipTests
+      - name: Download built JAR
+        uses: actions/download-artifact@v4
+        with:
+          name: pams-cli-app-${{ steps.version.outputs.tag }}
+          path: target/
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: target/pams-cli-app-*.jar
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: Release ${{ steps.version.outputs.tag }}
+          files: target/pams-cli-app-${{ steps.version.outputs.tag }}.jar
           generate_release_notes: true
