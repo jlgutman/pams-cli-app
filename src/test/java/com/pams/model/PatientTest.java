@@ -11,14 +11,15 @@ class PatientTest {
     @Test
     void constructorSetsAllFields() {
         LocalDate dob = LocalDate.of(1990, 6, 15);
-        Patient p = new Patient(1, "Jane", "Doe", "(555) 000-1111", "jane@example.com", "10 Main St", dob);
+        Address address = new Address("10 Main St", "Springfield", "IL", "62701");
+        Patient p = new Patient(1, "Jane", "Doe", "(555) 000-1111", "jane@example.com", address, dob);
 
         assertEquals(1, p.getId());
         assertEquals("Jane", p.getFirstName());
         assertEquals("Doe", p.getLastName());
         assertEquals("(555) 000-1111", p.getPhoneNumber());
         assertEquals("jane@example.com", p.getEmail());
-        assertEquals("10 Main St", p.getMailingAddress());
+        assertSame(address, p.getMailingAddress());
         assertEquals(dob, p.getDateOfBirth());
     }
 
@@ -35,5 +36,16 @@ class PatientTest {
         assertNull(p.getPhoneNumber());
         assertNull(p.getEmail());
         assertNull(p.getMailingAddress());
+    }
+
+    @Test
+    void mailingAddressFieldsAreAccessible() {
+        Address address = new Address("4 East Ave", "Chicago", "IL", "60601");
+        Patient p = new Patient(4, "Marcus", "Garvey", null, null, address, LocalDate.of(2001, 9, 18));
+
+        assertEquals("4 East Ave", p.getMailingAddress().getStreet());
+        assertEquals("Chicago",    p.getMailingAddress().getCity());
+        assertEquals("IL",         p.getMailingAddress().getState());
+        assertEquals("60601",      p.getMailingAddress().getZip());
     }
 }
